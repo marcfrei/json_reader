@@ -12,12 +12,13 @@
 #define SUBSTATE_READING_STRING_AFTER_ESCAPE 1
 
 #define SUBSTATE_READING_NUMBER_AFTER_MINUS 1
-#define SUBSTATE_READING_NUMBER_ZERO 2
+#define SUBSTATE_READING_NUMBER_AFTER_ZERO 2
 #define SUBSTATE_READING_NUMBER_INTEGER_PART 3
-#define SUBSTATE_READING_NUMBER_FRACTION_PART_0 4
-#define SUBSTATE_READING_NUMBER_FRACTION_PART_1 5
-#define SUBSTATE_READING_NUMBER_EXPONENT_PART_0 6
-#define SUBSTATE_READING_NUMBER_EXPONENT_PART_1 7
+#define SUBSTATE_READING_NUMBER_FRACTION_PART 4
+#define SUBSTATE_READING_NUMBER_FRACTION_PART_AFTER_DIGIT 5
+#define SUBSTATE_READING_NUMBER_EXPONENT_PART 6
+#define SUBSTATE_READING_NUMBER_EXPONENT_PART_AFTER_SIGN 7
+#define SUBSTATE_READING_NUMBER_EXPONENT_PART_AFTER_DIGIT 8
 
 #define SUBSTATE_READING_FALSE_AFTER_F 1
 #define SUBSTATE_READING_FALSE_AFTER_FA 2
@@ -34,105 +35,127 @@
 
 void json_reader_init (struct json_reader* r) {
 	assert(r != 0);
-	assert(r != 0);
 	r->state = JSON_READER_STATE_READING_WHITESPACE;
 	r->substate = SUBSTATE_NONE;
-	r->result_token = 0;
-	r->result_length = 0;
+}
+
+static size_t skip_digits (char* buffer, size_t length) {
+	size_t n; int x;
+	assert(buffer != 0);
+	n = 0;
+	if (n != length) {
+		x = buffer[n];
+		while (('0' <= x) && (x <= '9')) {
+			n++;
+			if (n != length) {
+				x = buffer[n];
+			} else {
+				x = -1;
+			}
+		}
+	}
+	return n;
+}
+static size_t skip_whitespace (char* buffer, size_t length) {
+	size_t n; int x;
+	assert(buffer != 0);
+	n = 0;
+	if (n != length) {
+		x = buffer[n];
+		while ((x == ' ') || (x == '\t') || (x == '\n') || (x == '\r')) {
+			n++;
+			if (n != length) {
+				x = buffer[n];
+			} else {
+				x = -1;
+			}
+		}
+	}
+	return n;
 }
 
 size_t json_reader_read (struct json_reader* r, char* buffer, size_t length) {
-	size_t n; int x;
+	size_t n;
 	assert(r != 0);
 	assert(buffer != 0);
-	r->result_token = 0;
-	r->result_length = 0;
 	n = 0;
 	if (n != length) {
 		do {
 			switch (r->state) {
 				case JSON_READER_STATE_READING_WHITESPACE:
-					x = buffer[n];
-					while ((x == ' ') || (x == '\t') || (x == '\n') || (x == '\r')) {
-						n++;
-						if (n != length) {
-							x = buffer[n];
-						} else {
-							x = -1;
+					n += skip_whitespace(&buffer[n], length - n);
+					if (n != length) {
+						switch (buffer[n]) {
+							case '{':
+								n++;
+								r->state = JSON_READER_STATE_BEGINNING_OBJECT;
+								break;
+							case '}':
+								n++;
+								r->state = JSON_READER_STATE_COMPLETED_OBJECT;
+								break;
+							case '[':
+								n++;
+								r->state = JSON_READER_STATE_BEGINNING_ARRAY;
+								break;
+							case ']':
+								n++;
+								r->state = JSON_READER_STATE_COMPLETED_ARRAY;
+								break;
+							case '-':
+								n++;
+								r->state = JSON_READER_STATE_READING_NUMBER;
+								r->substate = SUBSTATE_READING_NUMBER_AFTER_MINUS;
+								break;
+							case '0':
+								n++;
+								r->state = JSON_READER_STATE_READING_NUMBER;
+								r->substate = SUBSTATE_READING_NUMBER_AFTER_ZERO;
+								break;
+							case '1':
+							case '2':
+							case '3':
+							case '4':
+							case '5':
+							case '6':
+							case '7':
+							case '8':
+							case '9':
+								n++;
+								r->state = JSON_READER_STATE_READING_NUMBER;
+								r->substate = SUBSTATE_READING_NUMBER_INTEGER_PART;
+								break;
+							case '"':
+								n++;
+								r->state = JSON_READER_STATE_READING_STRING;
+								break;
+							case 'f':
+								n++;
+								r->state = JSON_READER_STATE_READING_FALSE;
+								r->substate = SUBSTATE_READING_FALSE_AFTER_F;
+								break;
+							case 't':
+								n++;
+								r->state = JSON_READER_STATE_READING_TRUE;
+								r->substate = SUBSTATE_READING_TRUE_AFTER_T;
+								break;
+							case 'n':
+								n++;
+								r->state = JSON_READER_STATE_READING_NULL;
+								r->substate = SUBSTATE_READING_NULL_AFTER_N;
+								break;
+							case ':':
+								n++;
+								r->state = JSON_READER_STATE_AFTER_NAME_SEPARATOR;
+								break;
+							case ',':
+								n++;
+								r->state = JSON_READER_STATE_AFTER_VALUE_SEPARATOR;
+								break;
+							default:
+								r->state = JSON_READER_STATE_ERROR;
+								break;
 						}
-					}
-					switch (x) {
-						case '{':
-							n++;
-							r->state = JSON_READER_STATE_BEGINNING_OBJECT;
-							break;
-						case '}':
-							n++;
-							r->state = JSON_READER_STATE_COMPLETED_OBJECT;
-							break;
-						case '[':
-							n++;
-							r->state = JSON_READER_STATE_BEGINNING_ARRAY;
-							break;
-						case ']':
-							n++;
-							r->state = JSON_READER_STATE_COMPLETED_ARRAY;
-							break;
-						case '-':
-							n++;
-							r->state = JSON_READER_STATE_READING_NUMBER;
-							r->substate = SUBSTATE_READING_NUMBER_AFTER_MINUS;
-							break;
-						case '0':
-							n++;
-							r->state = JSON_READER_STATE_READING_NUMBER;
-							r->substate = SUBSTATE_READING_NUMBER_ZERO;
-							break;
-						case '1':
-						case '2':
-						case '3':
-						case '4':
-						case '5':
-						case '6':
-						case '7':
-						case '8':
-						case '9':
-							n++;
-							r->state = JSON_READER_STATE_READING_NUMBER;
-							r->substate = SUBSTATE_READING_NUMBER_INTEGER_PART;
-							break;
-						case '"':
-							n++;
-							r->state = JSON_READER_STATE_READING_STRING;
-							break;
-						case 'f':
-							n++;
-							r->state = JSON_READER_STATE_READING_FALSE;
-							r->substate = SUBSTATE_READING_FALSE_AFTER_F;
-							break;
-						case 't':
-							n++;
-							r->state = JSON_READER_STATE_READING_TRUE;
-							r->substate = SUBSTATE_READING_TRUE_AFTER_T;
-							break;
-						case 'n':
-							n++;
-							r->state = JSON_READER_STATE_READING_NULL;
-							r->substate = SUBSTATE_READING_NULL_AFTER_N;
-							break;
-						case ':':
-							n++;
-							r->state = JSON_READER_STATE_AFTER_NAME_SEPARATOR;
-							break;
-						case ',':
-							n++;
-							r->state = JSON_READER_STATE_AFTER_VALUE_SEPARATOR;
-							break;
-						case -1:
-							break;
-						default:
-							r->state = JSON_READER_STATE_ERROR;
-							break;
 					}
 					break;
 				case JSON_READER_STATE_BEGINNING_OBJECT:
@@ -153,7 +176,7 @@ size_t json_reader_read (struct json_reader* r, char* buffer, size_t length) {
 							switch (buffer[n])  {
 								case '0':
 									n++;
-									r->substate = SUBSTATE_READING_NUMBER_ZERO;
+									r->substate = SUBSTATE_READING_NUMBER_AFTER_ZERO;
 									break;
 								case '1':
 								case '2':
@@ -173,52 +196,64 @@ size_t json_reader_read (struct json_reader* r, char* buffer, size_t length) {
 									break;
 							}
 							break;
-						case SUBSTATE_READING_NUMBER_ZERO:
+						case SUBSTATE_READING_NUMBER_AFTER_ZERO:
 							switch (buffer[n])  {
 								case '.':
 									n++;
-									r->substate = SUBSTATE_READING_NUMBER_FRACTION_PART_0;
+									r->substate = SUBSTATE_READING_NUMBER_FRACTION_PART;
 									break;
 								case 'e':
 								case 'E':
 									n++;
-									r->substate = SUBSTATE_READING_NUMBER_EXPONENT_PART_0;
+									r->substate = SUBSTATE_READING_NUMBER_EXPONENT_PART;
+									break;
+								case ' ':
+								case '\t':
+								case '\n':
+								case '\r':
+								case ']':
+								case '}':
+								case ',':
+									r->state = JSON_READER_STATE_COMPLETED_NUMBER;
+									r->substate = SUBSTATE_NONE;
 									break;
 								default:
-									r->state = JSON_READER_STATE_COMPLETED_NUMBER;
+									r->state = JSON_READER_STATE_ERROR;
 									r->substate = SUBSTATE_NONE;
 									break;
 							}
 							break;
 						case SUBSTATE_READING_NUMBER_INTEGER_PART:
-							x = buffer[n];
-							while (('0' <= x) && (x <= '9')) {
-								n++;
-								if (n != length) {
-									x = buffer[n];
-								} else {
-									x = -1;
+							n += skip_digits(&buffer[n], length - n);
+							if (n != length) {
+								switch (buffer[n])  {
+									case '.':
+										n++;
+										r->substate = SUBSTATE_READING_NUMBER_FRACTION_PART;
+										break;
+									case 'e':
+									case 'E':
+										n++;
+										r->substate = SUBSTATE_READING_NUMBER_EXPONENT_PART;
+										break;
+									case ' ':
+									case '\t':
+									case '\n':
+									case '\r':
+									case ']':
+									case '}':
+									case ',':
+										r->state = JSON_READER_STATE_COMPLETED_NUMBER;
+										r->substate = SUBSTATE_NONE;
+										break;
+									default:
+										r->state = JSON_READER_STATE_ERROR;
+										r->substate = SUBSTATE_NONE;
+										break;
 								}
 							}
-							switch (x)  {
-								case '.':
-									n++;
-									r->substate = SUBSTATE_READING_NUMBER_FRACTION_PART_0;
-									break;
-								case 'e':
-								case 'E':
-									n++;
-									r->substate = SUBSTATE_READING_NUMBER_EXPONENT_PART_0;
-									break;
-								case -1:
-									break;
-								default:
-									r->state = JSON_READER_STATE_COMPLETED_NUMBER;
-									r->substate = SUBSTATE_NONE;
-									break;
-							}
 							break;
-						case SUBSTATE_READING_NUMBER_FRACTION_PART_0:
+						case SUBSTATE_READING_NUMBER_FRACTION_PART:
 							switch (buffer[n])  {
 								case '0':
 								case '1':
@@ -231,7 +266,7 @@ size_t json_reader_read (struct json_reader* r, char* buffer, size_t length) {
 								case '8':
 								case '9':
 									n++;
-									r->substate = SUBSTATE_READING_NUMBER_FRACTION_PART_1;
+									r->substate = SUBSTATE_READING_NUMBER_FRACTION_PART_AFTER_DIGIT;
 									break;
 								default:
 									r->state = JSON_READER_STATE_ERROR;
@@ -239,34 +274,39 @@ size_t json_reader_read (struct json_reader* r, char* buffer, size_t length) {
 									break;
 							}
 							break;
-						case SUBSTATE_READING_NUMBER_FRACTION_PART_1:
-							x = buffer[n];
-							while (('0' <= x) && (x <= '9')) {
-								n++;
-								if (n != length) {
-									x = buffer[n];
-								} else {
-									x = -1;
+						case SUBSTATE_READING_NUMBER_FRACTION_PART_AFTER_DIGIT:
+							n += skip_digits(&buffer[n], length - n);
+							if (n != length) {
+								switch (buffer[n]) {
+									case 'e':
+									case 'E':
+										n++;
+										r->substate = SUBSTATE_READING_NUMBER_EXPONENT_PART;
+										break;
+									case ' ':
+									case '\t':
+									case '\n':
+									case '\r':
+									case ']':
+									case '}':
+									case ',':
+										r->state = JSON_READER_STATE_COMPLETED_NUMBER;
+										r->substate = SUBSTATE_NONE;
+										break;
+									default:
+										r->state = JSON_READER_STATE_ERROR;
+										r->substate = SUBSTATE_NONE;
+										break;
 								}
 							}
-							switch (x)  {
-								case 'e':
-								case 'E':
-									n++;
-									r->substate = SUBSTATE_READING_NUMBER_EXPONENT_PART_0;
-									break;
-								case -1:
-									break;
-								default:
-									r->state = JSON_READER_STATE_COMPLETED_NUMBER;
-									r->substate = SUBSTATE_NONE;
-									break;
-							}
 							break;
-						case SUBSTATE_READING_NUMBER_EXPONENT_PART_0:
+						case SUBSTATE_READING_NUMBER_EXPONENT_PART:
 							switch (buffer[n])  {
 								case '-':
 								case '+':
+									n++;
+									r->substate = SUBSTATE_READING_NUMBER_EXPONENT_PART_AFTER_SIGN;
+									break;
 								case '0':
 								case '1':
 								case '2':
@@ -278,7 +318,7 @@ size_t json_reader_read (struct json_reader* r, char* buffer, size_t length) {
 								case '8':
 								case '9':
 									n++;
-									r->substate = SUBSTATE_READING_NUMBER_EXPONENT_PART_1;
+									r->substate = SUBSTATE_READING_NUMBER_EXPONENT_PART_AFTER_DIGIT;
 									break;
 								default:
 									r->state = JSON_READER_STATE_ERROR;
@@ -286,19 +326,46 @@ size_t json_reader_read (struct json_reader* r, char* buffer, size_t length) {
 									break;
 							}
 							break;
-						case SUBSTATE_READING_NUMBER_EXPONENT_PART_0:
-							x = buffer[n];
-							while (('0' <= x) && (x <= '9')) {
-								n++;
-								if (n != length) {
-									x = buffer[n];
-								} else {
-									x = -1;
-								}
+						case SUBSTATE_READING_NUMBER_EXPONENT_PART_AFTER_SIGN:
+							switch (buffer[n])  {
+								case '0':
+								case '1':
+								case '2':
+								case '3':
+								case '4':
+								case '5':
+								case '6':
+								case '7':
+								case '8':
+								case '9':
+									n++;
+									r->substate = SUBSTATE_READING_NUMBER_EXPONENT_PART_AFTER_DIGIT;
+									break;
+								default:
+									r->state = JSON_READER_STATE_ERROR;
+									r->substate = SUBSTATE_NONE;
+									break;
 							}
-							if (x != -1) {
-								r->state = JSON_READER_STATE_COMPLETED_NUMBER;
-								r->substate = SUBSTATE_NONE;
+							break;
+						case SUBSTATE_READING_NUMBER_EXPONENT_PART_AFTER_DIGIT:
+							n += skip_digits(&buffer[n], length - n);
+							if (n != length) {
+								switch (buffer[n]) {
+									case ' ':
+									case '\t':
+									case '\n':
+									case '\r':
+									case ']':
+									case '}':
+									case ',':
+										r->state = JSON_READER_STATE_COMPLETED_NUMBER;
+										r->substate = SUBSTATE_NONE;
+										break;
+									default:
+										r->state = JSON_READER_STATE_ERROR;
+										r->substate = SUBSTATE_NONE;
+										break;
+								}
 							}
 							break;
 						default:
@@ -310,11 +377,12 @@ size_t json_reader_read (struct json_reader* r, char* buffer, size_t length) {
 					r->state = JSON_READER_STATE_READING_WHITESPACE;
 					break;
 				case JSON_READER_STATE_READING_STRING:
-					x = buffer[n];
-					while ((x != -1) && ((x != '"') || (r->substate != SUBSTATE_NONE))) {
+					while ((n != length)
+						&& ((buffer[n] != '"') || (r->substate != SUBSTATE_NONE)))
+					{
 						switch (r->substate) {
 							case SUBSTATE_NONE:
-								if (x == '\\') {
+								if (buffer[n] == '\\') {
 									r->substate = SUBSTATE_READING_STRING_AFTER_ESCAPE;
 								}
 								break;
@@ -326,13 +394,8 @@ size_t json_reader_read (struct json_reader* r, char* buffer, size_t length) {
 								break;
 						}
 						n++;
-						if (n != length) {
-							x = buffer[n];
-						} else {
-							x = -1;
-						}
 					}
-					if (x != -1) {
+					if (n != length) {
 						r->state = JSON_READER_STATE_COMPLETED_STRING;
 					}
 					break;

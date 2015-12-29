@@ -40,8 +40,6 @@ struct json_reader {
 	/** readonly **/
 	int state;
 	int substate;
-	char *result_token;
-	size_t result_length;
 };
 
 extern void json_reader_init (
