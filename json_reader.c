@@ -1,6 +1,8 @@
 /*
 ** Copyright (c) 2015, Yaler GmbH, Oberon microsystems AG, Switzerland
 ** All rights reserved
+**
+** See RFC 7159, http://www.rfc-editor.org/rfc/rfc7159.txt
 */
 
 #include <assert.h>
@@ -103,15 +105,7 @@ size_t json_reader_read (struct json_reader* r, char* buffer, size_t length) {
 								r->state = JSON_READER_STATE_COMPLETED_ARRAY;
 								break;
 							case '-':
-								n++;
-								r->state = JSON_READER_STATE_READING_NUMBER;
-								r->substate = SUBSTATE_READING_NUMBER_AFTER_MINUS;
-								break;
 							case '0':
-								n++;
-								r->state = JSON_READER_STATE_READING_NUMBER;
-								r->substate = SUBSTATE_READING_NUMBER_AFTER_ZERO;
-								break;
 							case '1':
 							case '2':
 							case '3':
@@ -121,28 +115,19 @@ size_t json_reader_read (struct json_reader* r, char* buffer, size_t length) {
 							case '7':
 							case '8':
 							case '9':
-								n++;
-								r->state = JSON_READER_STATE_READING_NUMBER;
-								r->substate = SUBSTATE_READING_NUMBER_INTEGER_PART;
+								r->state = JSON_READER_STATE_BEGINNING_NUMBER;
 								break;
 							case '"':
-								n++;
-								r->state = JSON_READER_STATE_READING_STRING;
+								r->state = JSON_READER_STATE_BEGINNING_STRING;
 								break;
 							case 'f':
-								n++;
-								r->state = JSON_READER_STATE_READING_FALSE;
-								r->substate = SUBSTATE_READING_FALSE_AFTER_F;
+								r->state = JSON_READER_STATE_BEGINNING_FALSE;
 								break;
 							case 't':
-								n++;
-								r->state = JSON_READER_STATE_READING_TRUE;
-								r->substate = SUBSTATE_READING_TRUE_AFTER_T;
+								r->state = JSON_READER_STATE_BEGINNING_TRUE;
 								break;
 							case 'n':
-								n++;
-								r->state = JSON_READER_STATE_READING_NULL;
-								r->substate = SUBSTATE_READING_NULL_AFTER_N;
+								r->state = JSON_READER_STATE_BEGINNING_NULL;
 								break;
 							case ':':
 								n++;
@@ -169,6 +154,36 @@ size_t json_reader_read (struct json_reader* r, char* buffer, size_t length) {
 					break;
 				case JSON_READER_STATE_COMPLETED_ARRAY:
 					r->state = JSON_READER_STATE_READING_WHITESPACE;
+					break;
+				case JSON_READER_STATE_BEGINNING_NUMBER:
+					switch (buffer[n]) {
+						case '-':
+							n++;
+							r->state = JSON_READER_STATE_READING_NUMBER;
+							r->substate = SUBSTATE_READING_NUMBER_AFTER_MINUS;
+							break;
+						case '0':
+							n++;
+							r->state = JSON_READER_STATE_READING_NUMBER;
+							r->substate = SUBSTATE_READING_NUMBER_AFTER_ZERO;
+							break;
+						case '1':
+						case '2':
+						case '3':
+						case '4':
+						case '5':
+						case '6':
+						case '7':
+						case '8':
+						case '9':
+							n++;
+							r->state = JSON_READER_STATE_READING_NUMBER;
+							r->substate = SUBSTATE_READING_NUMBER_INTEGER_PART;
+							break;
+						default:
+							r->state = JSON_READER_STATE_ERROR;
+							break;
+					}
 					break;
 				case JSON_READER_STATE_READING_NUMBER:
 					switch (r->substate) {
@@ -376,6 +391,14 @@ size_t json_reader_read (struct json_reader* r, char* buffer, size_t length) {
 				case JSON_READER_STATE_COMPLETED_NUMBER:
 					r->state = JSON_READER_STATE_READING_WHITESPACE;
 					break;
+				case JSON_READER_STATE_BEGINNING_STRING:
+					if (buffer[n] == '"') {
+						n++;
+						r->state = JSON_READER_STATE_READING_STRING;
+					} else {
+						r->state = JSON_READER_STATE_ERROR;
+					}
+					break;
 				case JSON_READER_STATE_READING_STRING:
 					while ((n != length)
 						&& ((buffer[n] != '"') || (r->substate != SUBSTATE_NONE)))
@@ -396,12 +419,21 @@ size_t json_reader_read (struct json_reader* r, char* buffer, size_t length) {
 						n++;
 					}
 					if (n != length) {
+						n++;
 						r->state = JSON_READER_STATE_COMPLETED_STRING;
 					}
 					break;
 				case JSON_READER_STATE_COMPLETED_STRING:
 					r->state = JSON_READER_STATE_READING_WHITESPACE;
 					break;
+				case JSON_READER_STATE_BEGINNING_FALSE:
+					if (buffer[n] == 'f') {
+						n++;
+						r->state = JSON_READER_STATE_READING_FALSE;
+						r->substate = SUBSTATE_READING_FALSE_AFTER_F;
+					} else {
+						r->state = JSON_READER_STATE_ERROR;
+					}
 				case JSON_READER_STATE_READING_FALSE:
 					switch (r->substate) {
 						case SUBSTATE_READING_FALSE_AFTER_F:
@@ -449,6 +481,14 @@ size_t json_reader_read (struct json_reader* r, char* buffer, size_t length) {
 				case JSON_READER_STATE_COMPLETED_FALSE:
 					r->state = JSON_READER_STATE_READING_WHITESPACE;
 					break;
+				case JSON_READER_STATE_BEGINNING_TRUE:
+					if (buffer[n] == 't') {
+						n++;
+						r->state = JSON_READER_STATE_READING_TRUE;
+						r->substate = SUBSTATE_READING_TRUE_AFTER_T;
+					} else {
+						r->state = JSON_READER_STATE_ERROR;
+					}
 				case JSON_READER_STATE_READING_TRUE:
 					switch (r->substate) {
 						case SUBSTATE_READING_TRUE_AFTER_T:
@@ -487,6 +527,14 @@ size_t json_reader_read (struct json_reader* r, char* buffer, size_t length) {
 				case JSON_READER_STATE_COMPLETED_TRUE:
 					r->state = JSON_READER_STATE_READING_WHITESPACE;
 					break;
+				case JSON_READER_STATE_BEGINNING_NULL:
+					if (buffer[n] == 'n') {
+						n++;
+						r->state = JSON_READER_STATE_READING_NULL;
+						r->substate = SUBSTATE_READING_NULL_AFTER_N;
+					} else {
+						r->state = JSON_READER_STATE_ERROR;
+					}
 				case JSON_READER_STATE_READING_NULL:
 					switch (r->substate) {
 						case SUBSTATE_READING_NULL_AFTER_N:
@@ -542,10 +590,15 @@ size_t json_reader_read (struct json_reader* r, char* buffer, size_t length) {
 			&& (r->state != JSON_READER_STATE_COMPLETED_OBJECT)
 			&& (r->state != JSON_READER_STATE_BEGINNING_ARRAY)
 			&& (r->state != JSON_READER_STATE_COMPLETED_ARRAY)
+			&& (r->state != JSON_READER_STATE_BEGINNING_NUMBER)
 			&& (r->state != JSON_READER_STATE_COMPLETED_NUMBER)
+			&& (r->state != JSON_READER_STATE_BEGINNING_STRING)
 			&& (r->state != JSON_READER_STATE_COMPLETED_STRING)
+			&& (r->state != JSON_READER_STATE_BEGINNING_FALSE)
 			&& (r->state != JSON_READER_STATE_COMPLETED_FALSE)
+			&& (r->state != JSON_READER_STATE_BEGINNING_TRUE)
 			&& (r->state != JSON_READER_STATE_COMPLETED_TRUE)
+			&& (r->state != JSON_READER_STATE_BEGINNING_NULL)
 			&& (r->state != JSON_READER_STATE_COMPLETED_NULL)
 			&& (r->state != JSON_READER_STATE_AFTER_NAME_SEPARATOR)
 			&& (r->state != JSON_READER_STATE_AFTER_VALUE_SEPARATOR)
