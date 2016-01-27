@@ -58,6 +58,7 @@ static size_t skip_digits (char* buffer, size_t length) {
 	}
 	return n;
 }
+
 static size_t skip_whitespace (char* buffer, size_t length) {
 	size_t n; int x;
 	assert(buffer != 0);
