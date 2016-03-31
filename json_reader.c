@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2015, Yaler GmbH, Oberon microsystems AG, Switzerland
+** Copyright (c) 2016, Yaler GmbH, Oberon microsystems AG, Switzerland
 ** All rights reserved
 **
 ** See RFC 7159, http://www.rfc-editor.org/rfc/rfc7159.txt
@@ -35,15 +35,15 @@
 #define SUBSTATE_READING_NULL_AFTER_NU 2
 #define SUBSTATE_READING_NULL_AFTER_NUL 3
 
-void json_reader_init (struct json_reader* r) {
-	assert(r != 0);
+void json_reader_init(struct json_reader *r) {
+	assert(r != NULL);
 	r->state = JSON_READER_STATE_READING_WHITESPACE;
 	r->substate = SUBSTATE_NONE;
 }
 
-static size_t skip_digits (char* buffer, size_t length) {
+static size_t skip_digits(char *buffer, size_t length) {
 	size_t n; int x;
-	assert(buffer != 0);
+	assert(buffer != NULL);
 	n = 0;
 	if (n != length) {
 		x = buffer[n];
@@ -59,9 +59,9 @@ static size_t skip_digits (char* buffer, size_t length) {
 	return n;
 }
 
-static size_t skip_whitespace (char* buffer, size_t length) {
+static size_t skip_whitespace(char *buffer, size_t length) {
 	size_t n; int x;
-	assert(buffer != 0);
+	assert(buffer != NULL);
 	n = 0;
 	if (n != length) {
 		x = buffer[n];
@@ -77,10 +77,10 @@ static size_t skip_whitespace (char* buffer, size_t length) {
 	return n;
 }
 
-size_t json_reader_read (struct json_reader* r, char* buffer, size_t length) {
+size_t json_reader_read(struct json_reader *r, char *buffer, size_t length) {
 	size_t n;
-	assert(r != 0);
-	assert(buffer != 0);
+	assert(r != NULL);
+	assert(buffer != NULL);
 	n = 0;
 	if (n != length) {
 		do {

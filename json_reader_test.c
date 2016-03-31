@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2015, Yaler GmbH, Switzerland
+** Copyright (c) 2016, Yaler GmbH, Switzerland
 ** All rights reserved
 */
 
@@ -15,7 +15,7 @@
 extern int snprintf(char *str, size_t size, char *format, ...);
 #endif
 
-static char* state (int state) {
+static char *state(int state) {
 	switch (state) {
 		case JSON_READER_STATE_READING_WHITESPACE:
 			return "JSON_READER_STATE_READING_WHITESPACE";
@@ -69,7 +69,7 @@ static char* state (int state) {
 	}
 }
 
-int main () {
+int main() {
 	size_t k, n;
 	int length;
 	char buffer[512];

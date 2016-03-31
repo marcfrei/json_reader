@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2015, Yaler GmbH, Oberon microsystems AG, Switzerland
+** Copyright (c) 2016, Yaler GmbH, Oberon microsystems AG, Switzerland
 ** All rights reserved
 **
 ** See RFC 7159, http://www.rfc-editor.org/rfc/rfc7159.txt
@@ -44,14 +44,13 @@
 #define JSON_READER_STATE_ERROR 22
 
 struct json_reader {
-	/** readonly **/
 	int state;
 	int substate;
 };
 
-extern void json_reader_init (
-	struct json_reader* r);
-extern size_t json_reader_read (
-	struct json_reader* r, char* buffer, size_t length);
+extern void json_reader_init(
+	struct json_reader *r);
+extern size_t json_reader_read(
+	struct json_reader *r, char *buffer, size_t length);
 
 #endif
