@@ -189,7 +189,7 @@ size_t json_reader_read(struct json_reader *r, char *buffer, size_t length) {
 				case JSON_READER_STATE_READING_NUMBER:
 					switch (r->substate) {
 						case SUBSTATE_READING_NUMBER_AFTER_MINUS:
-							switch (buffer[n])  {
+							switch (buffer[n]) {
 								case '0':
 									n++;
 									r->substate = SUBSTATE_READING_NUMBER_AFTER_ZERO;
@@ -213,7 +213,7 @@ size_t json_reader_read(struct json_reader *r, char *buffer, size_t length) {
 							}
 							break;
 						case SUBSTATE_READING_NUMBER_AFTER_ZERO:
-							switch (buffer[n])  {
+							switch (buffer[n]) {
 								case '.':
 									n++;
 									r->substate = SUBSTATE_READING_NUMBER_FRACTION_PART;
@@ -242,7 +242,7 @@ size_t json_reader_read(struct json_reader *r, char *buffer, size_t length) {
 						case SUBSTATE_READING_NUMBER_INTEGER_PART:
 							n += skip_digits(&buffer[n], length - n);
 							if (n != length) {
-								switch (buffer[n])  {
+								switch (buffer[n]) {
 									case '.':
 										n++;
 										r->substate = SUBSTATE_READING_NUMBER_FRACTION_PART;
@@ -270,7 +270,7 @@ size_t json_reader_read(struct json_reader *r, char *buffer, size_t length) {
 							}
 							break;
 						case SUBSTATE_READING_NUMBER_FRACTION_PART:
-							switch (buffer[n])  {
+							switch (buffer[n]) {
 								case '0':
 								case '1':
 								case '2':
@@ -317,7 +317,7 @@ size_t json_reader_read(struct json_reader *r, char *buffer, size_t length) {
 							}
 							break;
 						case SUBSTATE_READING_NUMBER_EXPONENT_PART:
-							switch (buffer[n])  {
+							switch (buffer[n]) {
 								case '-':
 								case '+':
 									n++;
@@ -343,7 +343,7 @@ size_t json_reader_read(struct json_reader *r, char *buffer, size_t length) {
 							}
 							break;
 						case SUBSTATE_READING_NUMBER_EXPONENT_PART_AFTER_SIGN:
-							switch (buffer[n])  {
+							switch (buffer[n]) {
 								case '0':
 								case '1':
 								case '2':
