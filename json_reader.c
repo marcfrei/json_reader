@@ -435,6 +435,7 @@ size_t json_reader_read(struct json_reader *r, char *buffer, size_t length) {
 				} else {
 					r->state = JSON_READER_STATE_ERROR;
 				}
+				break;
 			case JSON_READER_STATE_READING_FALSE:
 				switch (r->substate) {
 				case SUBSTATE_READING_FALSE_AFTER_F:
@@ -490,6 +491,7 @@ size_t json_reader_read(struct json_reader *r, char *buffer, size_t length) {
 				} else {
 					r->state = JSON_READER_STATE_ERROR;
 				}
+				break;
 			case JSON_READER_STATE_READING_TRUE:
 				switch (r->substate) {
 				case SUBSTATE_READING_TRUE_AFTER_T:
@@ -536,6 +538,7 @@ size_t json_reader_read(struct json_reader *r, char *buffer, size_t length) {
 				} else {
 					r->state = JSON_READER_STATE_ERROR;
 				}
+				break;
 			case JSON_READER_STATE_READING_NULL:
 				switch (r->substate) {
 				case SUBSTATE_READING_NULL_AFTER_N:
