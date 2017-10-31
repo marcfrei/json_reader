@@ -59,7 +59,7 @@ static size_t skip_digits(char *buffer, size_t length) {
 		}
 	}
 	assert((n == length) || ((n < length)
-		&& ((buffer[n] < '0') || (buffer[n]) > '9')));
+		&& ((buffer[n] < '0') || (buffer[n] > '9'))));
 	return n;
 }
 
