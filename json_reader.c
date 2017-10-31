@@ -45,17 +45,21 @@ static size_t skip_digits(char *buffer, size_t length) {
 	size_t n; int x;
 	assert(buffer != NULL);
 	n = 0;
-	if (n != length) {
+	assert(n <= length);
+	if (n < length) {
 		x = buffer[n];
 		while (('0' <= x) && (x <= '9')) {
 			n++;
-			if (n != length) {
+			assert(n <= length);
+			if (n < length) {
 				x = buffer[n];
 			} else {
 				x = -1;
 			}
 		}
 	}
+	assert((n == length) || ((n < length)
+		&& ((buffer[n] < '0') || (buffer[n]) > '9')));
 	return n;
 }
 
@@ -63,31 +67,38 @@ static size_t skip_whitespace(char *buffer, size_t length) {
 	size_t n; int x;
 	assert(buffer != NULL);
 	n = 0;
-	if (n != length) {
+	assert(n <= length);
+	if (n < length) {
 		x = buffer[n];
 		while ((x == ' ') || (x == '\t') || (x == '\n') || (x == '\r')) {
 			n++;
-			if (n != length) {
+			assert(n <= length);
+			if (n < length) {
 				x = buffer[n];
 			} else {
 				x = -1;
 			}
 		}
 	}
+	assert((n == length) || ((n < length)
+		&& (buffer[n] != ' ') && (buffer[n] != '\t')
+		&& (buffer[n] != '\n') && (buffer[n] != '\r')));
 	return n;
 }
 
 size_t json_reader_read(struct json_reader *r, char *buffer, size_t length) {
-	size_t n;
+	size_t n; int post;
 	assert(r != NULL);
 	assert(buffer != NULL);
 	n = 0;
-	if (n != length) {
+	assert(n <= length);
+	if (n < length) {
 		do {
 			switch (r->state) {
 			case JSON_READER_STATE_READING_WHITESPACE:
 				n += skip_whitespace(&buffer[n], length - n);
-				if (n != length) {
+				assert(n <= length);
+				if (n < length) {
 					switch (buffer[n]) {
 					case '{':
 						n++;
@@ -241,7 +252,8 @@ size_t json_reader_read(struct json_reader *r, char *buffer, size_t length) {
 					break;
 				case SUBSTATE_READING_NUMBER_INTEGER_PART:
 					n += skip_digits(&buffer[n], length - n);
-					if (n != length) {
+					assert(n <= length);
+					if (n < length) {
 						switch (buffer[n]) {
 						case '.':
 							n++;
@@ -292,7 +304,8 @@ size_t json_reader_read(struct json_reader *r, char *buffer, size_t length) {
 					break;
 				case SUBSTATE_READING_NUMBER_FRACTION_PART_AFTER_DIGIT:
 					n += skip_digits(&buffer[n], length - n);
-					if (n != length) {
+					assert(n <= length);
+					if (n < length) {
 						switch (buffer[n]) {
 						case 'e':
 						case 'E':
@@ -365,7 +378,8 @@ size_t json_reader_read(struct json_reader *r, char *buffer, size_t length) {
 					break;
 				case SUBSTATE_READING_NUMBER_EXPONENT_PART_AFTER_DIGIT:
 					n += skip_digits(&buffer[n], length - n);
-					if (n != length) {
+					assert(n <= length);
+					if (n < length) {
 						switch (buffer[n]) {
 						case ' ':
 						case '\t':
@@ -401,8 +415,9 @@ size_t json_reader_read(struct json_reader *r, char *buffer, size_t length) {
 				}
 				break;
 			case JSON_READER_STATE_READING_STRING:
-				while ((n != length)
-					&& ((buffer[n] != '"') || (r->substate != SUBSTATE_NONE)))
+				assert(n <= length);
+				while ((n < length)
+					&& ((r->substate != SUBSTATE_NONE) || (buffer[n] != '"')))
 				{
 					switch (r->substate) {
 					case SUBSTATE_NONE:
@@ -419,7 +434,8 @@ size_t json_reader_read(struct json_reader *r, char *buffer, size_t length) {
 					}
 					n++;
 				}
-				if (n != length) {
+				assert(n <= length);
+				if (n < length) {
 					n++;
 					r->state = JSON_READER_STATE_COMPLETED_STRING;
 				}
@@ -589,7 +605,7 @@ size_t json_reader_read(struct json_reader *r, char *buffer, size_t length) {
 				assert(0);
 				break;
 			}
-		} while ((n != length)
+		} while ((n < length)
 			&& (r->state != JSON_READER_STATE_BEGINNING_OBJECT)
 			&& (r->state != JSON_READER_STATE_COMPLETED_OBJECT)
 			&& (r->state != JSON_READER_STATE_BEGINNING_ARRAY)
@@ -608,5 +624,24 @@ size_t json_reader_read(struct json_reader *r, char *buffer, size_t length) {
 			&& (r->state != JSON_READER_STATE_AFTER_VALUE_SEPARATOR)
 			&& (r->state != JSON_READER_STATE_ERROR));
 	}
+	post = (n == length) || ((n < length) &&
+		((r->state == JSON_READER_STATE_ERROR)
+		|| (r->state == JSON_READER_STATE_BEGINNING_OBJECT)
+		|| (r->state == JSON_READER_STATE_COMPLETED_OBJECT)
+		|| (r->state == JSON_READER_STATE_BEGINNING_ARRAY)
+		|| (r->state == JSON_READER_STATE_COMPLETED_ARRAY)
+		|| (r->state == JSON_READER_STATE_BEGINNING_NUMBER)
+		|| (r->state == JSON_READER_STATE_COMPLETED_NUMBER)
+		|| (r->state == JSON_READER_STATE_BEGINNING_STRING)
+		|| (r->state == JSON_READER_STATE_COMPLETED_STRING)
+		|| (r->state == JSON_READER_STATE_BEGINNING_FALSE)
+		|| (r->state == JSON_READER_STATE_COMPLETED_FALSE)
+		|| (r->state == JSON_READER_STATE_BEGINNING_TRUE)
+		|| (r->state == JSON_READER_STATE_COMPLETED_TRUE)
+		|| (r->state == JSON_READER_STATE_BEGINNING_NULL)
+		|| (r->state == JSON_READER_STATE_COMPLETED_NULL)
+		|| (r->state == JSON_READER_STATE_AFTER_NAME_SEPARATOR)
+		|| (r->state == JSON_READER_STATE_AFTER_VALUE_SEPARATOR)));
+	assert(post);
 	return n;
 }
