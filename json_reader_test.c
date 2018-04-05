@@ -1,15 +1,14 @@
 /*
-** Copyright (c) 2016, Yaler GmbH, Switzerland
-** All rights reserved
-*/
+ * Copyright (c) 2016 - 2018, Yaler GmbH, Oberon microsystems AG, Switzerland
+ * All rights reserved
+ */
 
 #include <assert.h>
-#include <stddef.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include "json_reader.h"
+#include "json_reader_utils.h"
 
 #if !(defined __APPLE__ && defined __MACH__)
 extern int snprintf(char *str, size_t size, char *format, ...);
@@ -69,24 +68,83 @@ static char *state(int state) {
 	}
 }
 
-int main() {
-	size_t k, n;
-	int length;
-	char buffer[512];
+static void print_value(char *buffer) {
+	size_t k, n, length;
 	struct json_reader reader;
 
-	length = snprintf(buffer, sizeof buffer,
-		/*
-		"null"
+	assert(buffer != NULL);
+	json_reader_init(&reader);
+	k = 0; n = 0; length = strlen(buffer);
+	while ((n != length) && (reader.state != JSON_READER_STATE_ERROR)) {
+		n += json_reader_read(&reader, &buffer[n], 1);
+		puts(state(reader.state));
+		switch (reader.state) {
+		case JSON_READER_STATE_BEGINNING_STRING:
+		case JSON_READER_STATE_BEGINNING_NUMBER:
+			k = n;
+			break;
+		case JSON_READER_STATE_COMPLETED_STRING:
+		case JSON_READER_STATE_COMPLETED_NUMBER:
+			putchar(' ');
+			putchar(' ');
+			while (k != n) {
+				putchar(buffer[k]);
+				k++;
+			}
+			putchar('\n');
+			break;
+		}
+	}
+	assert(n == length);
+	assert((reader.state == JSON_READER_STATE_READING_WHITESPACE)
+		|| (reader.state == JSON_READER_STATE_COMPLETED_OBJECT)
+		|| (reader.state == JSON_READER_STATE_COMPLETED_ARRAY)
+		|| (reader.state == JSON_READER_STATE_COMPLETED_STRING)
+		|| (reader.state == JSON_READER_STATE_COMPLETED_FALSE)
+		|| (reader.state == JSON_READER_STATE_COMPLETED_TRUE)
+		|| (reader.state == JSON_READER_STATE_COMPLETED_NULL));
+}
 
-		"false"
+static void skip_value(char *buffer) {
+	size_t n, length;
+	struct json_reader reader;
+	struct json_reader_context reader_context;
 
-		"true"
+	assert(buffer != NULL);
+	json_reader_init(&reader);
+	json_reader_context_init(&reader_context);
+	n = 0; length = strlen(buffer);
+	while ((n != length)
+		&& (reader_context.state == JSON_READER_CONETXT_STATE_READING_VALUE))
+	{
+		n += json_reader_utils_skip_value(&reader, &reader_context, &buffer[n], 1);
+	}
+	assert(n == length);
+	assert(reader_context.state == JSON_READER_CONETXT_STATE_COMPLETED_VALUE);
+	assert((reader.state == JSON_READER_STATE_COMPLETED_OBJECT)
+		|| (reader.state == JSON_READER_STATE_COMPLETED_ARRAY)
+		|| (reader.state == JSON_READER_STATE_COMPLETED_STRING)
+		|| (reader.state == JSON_READER_STATE_COMPLETED_FALSE)
+		|| (reader.state == JSON_READER_STATE_COMPLETED_TRUE)
+		|| (reader.state == JSON_READER_STATE_COMPLETED_NULL));
+}
 
-		"42\n"
+int main() {
+	char *json_text;
 
-		"\"Hello world!\""
+	print_value("null");
+	skip_value("null");
 
+	print_value("false");
+	skip_value("false");
+
+	print_value("true");
+	skip_value("true");
+
+	print_value("\"Hello world!\"");
+	skip_value("\"Hello world!\"");
+
+	json_text =
 		"      {"
 		"        \"Image\": {"
 		"            \"Width\":  800,"
@@ -100,9 +158,11 @@ int main() {
 		"            \"Animated\" : false,"
 		"            \"IDs\": [116, 943, 234, 38793]"
 		"          }"
-		"      }"
-		*/
-		
+		"      }";
+	print_value(json_text);
+	skip_value(json_text);
+
+	json_text =
 		"["
 		"  {"
 		"     \"precision\": \"zip\","
@@ -124,33 +184,36 @@ int main() {
 		"     \"Zip\":       \"94085\","
 		"     \"Country\":   \"US\""
 		"  }"
-		"]"
-	);
-	assert((0 <= length) && ((size_t) length < sizeof buffer));
+		"]";
+	print_value(json_text);
+	skip_value(json_text);
 
-	json_reader_init(&reader);
+	print_value("42\n");
 
-	n = 0;
-	while ((reader.state != JSON_READER_STATE_ERROR) && (n != (size_t) length)) {
-		n += json_reader_read(&reader, &buffer[n], (size_t) 1);
-		puts(state(reader.state));
-		switch (reader.state) {
-		case JSON_READER_STATE_BEGINNING_STRING:
-		case JSON_READER_STATE_BEGINNING_NUMBER:
-			k = n;
-			break;
-		case JSON_READER_STATE_COMPLETED_STRING:
-		case JSON_READER_STATE_COMPLETED_NUMBER:
-			putchar(' ');
-			putchar(' ');
-			while (k != n) {
-				putchar(buffer[k]);
-				k++;
-			}
-			putchar('\n');
-			break;
-		}
-	}
+	skip_value("{}");
+  skip_value("{\"0\":7}");
+  skip_value("{\"0\":0,\"1\":1,\"2\":2}");
+  skip_value("[]");
+  skip_value("[7]");
+  skip_value("[7,77,777]");
+  skip_value("[\"X\"]");
+  skip_value("[false]");
+  skip_value("[true]");
+  skip_value("[null]");
+  skip_value(
+		"{\"00\":{\"01\":{\"02\":{\"03\":{\"04\":{\"05\":{\"06\":{\"07\":"
+		"{\"08\":{\"09\":{\"10\":{\"11\":{\"12\":{\"13\":{\"15\":{\"15\":"
+		"{\"16\":{\"17\":{\"18\":{\"19\":{\"20\":{\"21\":{\"22\":{\"23\":"
+		"{\"24\":{\"25\":{\"26\":{\"27\":{\"28\":{\"29\":{\"30\":{\"31\":"
+		"{\"32\":{\"33\":{\"34\":{\"35\":{\"36\":{\"37\":{\"38\":{\"39\":"
+		"{\"40\":{\"41\":{\"42\":{\"43\":{\"44\":{\"45\":{\"46\":{\"47\":"
+		"{\"48\":{\"49\":{\"50\":{\"51\":{\"52\":{\"53\":{\"54\":{\"55\":"
+		"{\"56\":{\"57\":{\"58\":{\"59\":{\"60\":{\"61\":{\"62\":{\"63\":"
+		"0}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}");
+  skip_value(
+		"[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[["
+		"7,77,777"
+		"]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]");
 
-	exit(EXIT_SUCCESS);
+	return 0;
 }

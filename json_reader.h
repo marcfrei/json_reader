@@ -1,9 +1,9 @@
 /*
-** Copyright (c) 2016, Yaler GmbH, Oberon microsystems AG, Switzerland
-** All rights reserved
-**
-** See RFC 7159, http://www.rfc-editor.org/rfc/rfc7159.txt
-*/
+ * Copyright (c) 2016 - 2018, Yaler GmbH, Oberon microsystems AG, Switzerland
+ * All rights reserved
+ *
+ * See RFC 7159, http://www.rfc-editor.org/rfc/rfc7159.txt
+ */
 
 #ifndef JSON_READER_H
 #define JSON_READER_H

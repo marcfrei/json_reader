@@ -1,9 +1,9 @@
 /*
-** Copyright (c) 2016, Yaler GmbH, Oberon microsystems AG, Switzerland
-** All rights reserved
-**
-** See RFC 7159, http://www.rfc-editor.org/rfc/rfc7159.txt
-*/
+ * Copyright (c) 2016 - 2018, Yaler GmbH, Oberon microsystems AG, Switzerland
+ * All rights reserved
+ *
+ * See RFC 7159, http://www.rfc-editor.org/rfc/rfc7159.txt
+ */
 
 #include <assert.h>
 
@@ -45,7 +45,6 @@ static size_t skip_digits(char *buffer, size_t length) {
 	size_t n; int x;
 	assert(buffer != NULL);
 	n = 0;
-	assert(n <= length);
 	if (n < length) {
 		x = buffer[n];
 		while (('0' <= x) && (x <= '9')) {
@@ -67,7 +66,6 @@ static size_t skip_whitespace(char *buffer, size_t length) {
 	size_t n; int x;
 	assert(buffer != NULL);
 	n = 0;
-	assert(n <= length);
 	if (n < length) {
 		x = buffer[n];
 		while ((x == ' ') || (x == '\t') || (x == '\n') || (x == '\r')) {
@@ -91,7 +89,6 @@ size_t json_reader_read(struct json_reader *r, char *buffer, size_t length) {
 	assert(r != NULL);
 	assert(buffer != NULL);
 	n = 0;
-	assert(n <= length);
 	if (n < length) {
 		do {
 			switch (r->state) {
