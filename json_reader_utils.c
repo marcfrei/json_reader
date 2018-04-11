@@ -85,6 +85,7 @@ size_t json_reader_utils_skip_value(
 				assert(n <= length);
 				switch (r->state) {
 				case JSON_READER_STATE_READING_WHITESPACE:
+					assert(n == length);
 					break;
 				case JSON_READER_STATE_BEGINNING_OBJECT:
 					if (c->substate == SUBSTATE_EXPECTING_VALUE) {
@@ -134,20 +135,20 @@ size_t json_reader_utils_skip_value(
 				case JSON_READER_STATE_READING_FALSE:
 				case JSON_READER_STATE_READING_TRUE:
 				case JSON_READER_STATE_READING_NULL:
+					assert(n == length);
 					break;
 				case JSON_READER_STATE_COMPLETED_OBJECT:
 					if (c->substate == SUBSTATE_EXPECTING_NAME) {
-						assert(!stack_is_empty(c)
-							&& (stack_top(c) == STATE_READING_OBJECT));
+						assert(!stack_is_empty(c));
+						assert(stack_top(c) == STATE_READING_OBJECT);
 						stack_pop(c);
 						c->substate = SUBSTATE_COMPLETED_VALUE;
 						if (stack_is_empty(c)) {
 							c->state = JSON_READER_CONETXT_STATE_COMPLETED_VALUE;
 						}
 					} else if (c->substate == SUBSTATE_COMPLETED_VALUE) {
-						if (!stack_is_empty(c)
-							&& (stack_top(c) == STATE_READING_OBJECT))
-						{
+						assert(!stack_is_empty(c));
+						if (stack_top(c) == STATE_READING_OBJECT) {
 							stack_pop(c);
 							c->substate = SUBSTATE_COMPLETED_VALUE;
 							if (stack_is_empty(c)) {
@@ -164,9 +165,8 @@ size_t json_reader_utils_skip_value(
 					if ((c->substate == SUBSTATE_EXPECTING_VALUE)
 						|| (c->substate == SUBSTATE_COMPLETED_VALUE))
 					{
-						if (!stack_is_empty(c)
-							&& (stack_top(c) == STATE_READING_ARRAY))
-						{
+						assert(!stack_is_empty(c));
+						if (stack_top(c) == STATE_READING_ARRAY) {
 							stack_pop(c);
 							c->substate = SUBSTATE_COMPLETED_VALUE;
 							if (stack_is_empty(c)) {
